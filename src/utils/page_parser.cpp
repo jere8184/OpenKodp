@@ -21,7 +21,6 @@ Node* find_xml_node(Node* node, const std::string& value)
 {
 	if (node->Value() == value)
 	{
-		std::println("found");
 		return node;
 	}
 
@@ -65,9 +64,25 @@ std::vector<Node*> find_page_nodes(const tinyxml2::XMLDocument& document)
 	return result;
 }
 
-std::pair<std::string, std::string> extract_key_value(Node* key_node)
+std::pair<std::string, Values> extract_key_value(Node* key_node)
 {
-	return {key_node->FirstChild()->Value(), key_node->NextSiblingElement()->FirstChild()->Value()}; 
+	const std::string& key_name = key_node->FirstChild()->Value();
+	Node* value_node = key_node->NextSiblingElement();
+	Values values;
+
+	if (value_node->Value() == std::string("string"))
+		values.push_back(value_node->FirstChild()->Value());
+	else if (value_node->Value() == std::string("array"))
+	{
+		Node* array_value = value_node->FirstChild();
+		while (array_value != nullptr)
+		{
+			values.push_back(array_value->FirstChild()->Value());
+			array_value = array_value->NextSibling();
+		}
+	}
+
+	return {key_name, values}; 
 };
 
 std::vector<Page> parse_page_nodes(const std::vector<Node*>& pages_nodes)

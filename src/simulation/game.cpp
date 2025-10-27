@@ -5,197 +5,177 @@
 #include <algorithm>
 #include <functional>
 #include <print>
+#include <cctype>
+#include <ranges>
+#include <string_view>
 
+#include "utils/page_parser.hpp"
+#include "menu/menu.hpp"
+#include "menu/option.hpp"
 
-struct Option
+std::tuple<std::vector<int>, std::string> intro_seqence()
 {
-	std::string prompt;
-	std::function<void()> func;
+	std::vector<PageParser::Page> pages = PageParser::get_pages("Intro.plist");
+	std::vector<int> choices;
 
-	Option(const std::string& prompt, bool& flag) :
-		prompt(prompt)
+	for (const PageParser::Page& page : pages)
 	{
-		func = [&flag](){flag = true;};
-	}
+		if (page.contains("text"))
+			std::println("\n{}\n", page.at("text")[0]);
 
-	Option(const std::string& prompt, std::function<void()> func) :
-		prompt(prompt),
-		func(func)
-	{}
-
-	Option(std::pair<const std::string, bool>& pair)
-	{
-		Option(pair.first, pair.second);
-	}
-
-	Option(const std::string& prompt) :
-		prompt(prompt)
-	{
-		func = [](){};
-	}
-
-};
-
-class Menu
-{
-public:
-	Menu(const std::vector<Option>&& options) :
-		options(options)
-	{}
-
-	void prompt() 
-	{
-		do
+		if (page.contains("responses"))
 		{
-			int input;
+			std::vector<Option> options;
+			std::map<int, std::string> menu_strings;
 
-			for (int i = 0; i < options.size(); i++)
-				std::println("{}) {}", i+1, options[i].prompt);
-
-			if (!(std::cin >> input) || input > options.size() || input < -1 || input == 0)
+			int i = 0;
+			for (const std::string& response : page.at("responses"))
 			{
-				std::cin.clear();
-				std::cin.ignore(std::numeric_limits<std::streamsize>().max(), '\n');
+				if(response.front() == '~')
+					menu_strings[i] = std::string_view(&response[1], response.length() - 1);
+				else
+					options.push_back(response);
+				i++;
 			}
-			else
-			{
-				options[input-1].func();
-				return;
-			}
-		} while(true);
+			
+			choices.push_back(Menu(options, menu_strings).prompt());
+		}
+		else
+		{
+			Menu({Option("Continue")}).prompt();		
+		}
 	}
-	
-private:	
-	std::vector<Option> options;
+
+	Menu difficulty_menu = Menu({Option("Normal"), Option("Medium"), Option("Hard")});
+	choices.push_back(0);
+
+	Menu length_menu = Menu({Option("Short"), Option("Long")});
+	choices.push_back(0);
+
+
+	std::string tribe_name; 
+	Menu({Option("Set Difficulty", difficulty_menu, choices[choices.size() - 1]),
+		  Option("Set Length", length_menu, choices[choices.size() - 2]),
+		  Option("Choose Tribe Name", tribe_name)}, {}, true).prompt();
+
+	return {choices, tribe_name};
+}
+
+
+enum class WeddingChoice
+{
+	NOT_SET,
+	ELMAL,
+	ORLANTH,
+	ERNALDA
 };
 
+enum class EarlyEventChoice
+{			
+	NOT_SET,
+	CHALAN_ARROY,
+	ODAYLA,
+	ISSARIES,
+	URALDA,
+	BARNTAR,
+	LHANKOR_MHY,
+	PELLA,
+	ROITINA
+};
 
-void intro_seqence()
+enum class ThrallsChoice
 {
-	std::println("There once was a time when gods and people walked the earth together.\n"
-					"Your clan traces its ancestry back to those times.\n"
-					"Your clan history begins when you joined the forces of the\n"
- 					"storm god Orlanth. Back then, Orlanth was simply one of many upstart, rebellious\n"
-					"gods bent upon conquest of the world. Orlanth's unique contributions\n" 
-					"at that time were personal honor, and a close kinship to the other deities\n"
-					"who seemed to be on the winning side.\n");
+	NOT_SET,
+	TOOK_THRALLS,
+	DIDNT_TAKE_THRALLS
+};
 
-	Menu next({Option("Continue")});
-	next.prompt();
-	std::println("After many tribulations, adventures, and discoveries\n"
-		 		"Orlanth proved himself worthy of marrying Ernalda, the Earth Mother.\n"
-				"The two formed the Marriage Ring, and created a great harmony in the world\n"
-				"through this sacred bond. Your clan took part in the wedding ceremony.\n"
-				"Most clans either whooped with Orlanth, or learned a secret from Ernalda.\n"
-				"A few clans stood with Elmal, God of Horses and the Sun, as an honor guard.\n"
-				
-				"How did you prepare for the great marriage?\n");
-	
-	const std::string elmal_choice = "Your men and women donned gleaming armor\n"
-								"and stood guard with Elmal, to protect the celebrants from Orlanth's; many enemies.\n";
-	
-	const std::string orlanth_choice = "Your men whooped with Orlanth, and drank the Eight Known Drinks,\n"
-	 								"so that your heads would hurt during the ceremony.\n";
+enum class EnemyChoice
+{
+	NOT_SET,
+	BOZTAKANG,
+	UKKAR_GRA,
+	CHINKIS_MOR,
+	TADA_THE_GREEN,
+	VES_VENNA
+};
 
-	const std::string ernalda_choice = "Your women withdrew with Ernalda, and learned a\n"
-										"List of Names, which they promised not to repeat to the men.\n";
+enum class WarPeaceChoice
+{
+	NOT_SET,
+	WAR,
+	PEACE,
+	BALLENCED
+};
 
-	bool chose_elmal = false;
-	bool chose_orlanth = false;
-	bool chose_ernalda = false;
+enum class FirstGodChoice
+{
+	NOT_SET,
+	ANCESTORS,
+	LIVING_DIETY,
+	ELMAL,
+	UROX,
+	ODAYLA,
+	ERNALDA,
+	ORLANTH,
+	ISSARIES,
+	LHANKOR_MHY,
+	CHALANA_ARROY,
+	URALDA
+};
 
-	Menu ernalds_wedding({Option(elmal_choice, chose_elmal),
-						 Option(orlanth_choice, chose_orlanth),
-						 Option(ernalda_choice, chose_ernalda)});
+enum class DragonChoice
+{
+	NOT_SET,
+	HOSTILE,
+	NEUTRAL,
+	POSITIVE
+};
 
-	ernalds_wedding.prompt();
+enum class LandClaimChoice
+{
+	NOT_SET,
+	SMALL,
+	NORMAL,
+	LOTS,
+	HUGE
+};
 
-	std::println("Orlanth's struggle to remake the world was just beginning, and many other gods joined him in it.\n"
-		 			"Orlanth fought Yelm the Bright Emperor, and undertook many wars of conquest.\n"
-					"Other, more peaceful deeds were just as important. Your earliest Famous Event was:\n");
-	
-	std::pair<const std::string, bool> chalan_arroy = {"The Healing of Orlanth, when the merciful goddess Chalana Arroy joined Orlanth's tribe.", false};
-	std::pair<const std::string, bool> odayla = {"The Hundred-Day Hunt, when Orlanth and his son Odayla tracked the Sky Bear.", false};
-	std::pair<const std::string, bool> issaries = {"Jested's Settlement, where Orlanth and Issaries the Talking God outwitted foreign deities in a difficult negotiation.", false};
-	std::pair<const std::string, bool> uralda = {"The Procession of the Animals, where Uralda the Cow Mother led the sacred herds into Orlanth's stead.", false};
-	std::pair<const std::string, bool> barntar = {"When Barntar, son of Orlanth and Ernalda, learned of harnessing oxen to plow.", false};
-	std::pair<const std::string, bool> lhankor_mhy = {"When Lhankor Mhy, the Knowing God, learned how to use the marking bone, which could mark signs of power upon anything.", false};
-	std::pair<const std::string, bool> pella = {"When Pella, the pottery goddess, made the first pot to store grain in.", false};
-	std::pair<const std::string, bool> roitina = {"When Roitina, lady of dance, first did the Clan-making Dance.", false};
+enum class DifficultyChoice
+{
+	NOT_SET,
+	NORMAL,
+	MEDIUM,
+	HARD
+};
 
-	Menu first_god({chalan_arroy,
-					odayla,
-					issaries,
-					uralda,
-					barntar,
-					lhankor_mhy,
-					pella,
-					roitina});
-	
-	first_god.prompt();
-
-	std::println("Orlanth succeeded in remaking the world. Thus began the golden era called the Storm Age.\n"
-		 			"Orlanth’s son Vingkot was a famous warlord during this time. Most people in the area were his followers.\n"
-					"He introduced new principles, such as the rule of hospitality, which said that after you invited people into your steads,\n"
-					"you could not attack or harm them. Thus was much treachery banished from Orlanthi society.\n"
-					"Many who would not have survived agreed to his new ways in order to gain his protection.\n"
-					"He was a great organizer, and helped the many scattered people form into new clans and tribes.\n"
-					"Your clan was one of those aided by King Vingkot. After you proved yourselves robust and capable of survival,\n"
-					"Vingkot placed a remnant people under your protection. They were the Nalda Bin, or \"Stick Farmers.\" You had a choice\n"
-					"whether to make them into thralls (slaves) or adopt them as members of your clan.\n\n"
-					"How did you add these strangers?\n");
-
-	bool chose_to_take_thralls; 
-	Menu take_thralls({Option("As thralls", chose_to_take_thralls),
-						Option("As adpoted family", [&chose_to_take_thralls](){chose_to_take_thralls = false;})});
-
-	take_thralls.prompt();
-
-	std::println("The foes of the Vingkotlings were many, and your people fought hard against them. Which one of them in particular did you fight?");
-
-
-	std::pair<const std::string, bool> boztakang = {"Boztakang the Troll Lord.", false};
-	std::pair<const std::string, bool> ukkar_gra = {"Ukkar Gra, King of the Basmoli Beastmen.", false};
-	std::pair<const std::string, bool> chinkis_mor = {"Chinkis Mor, the Elf Warlord.", false};
-	std::pair<const std::string, bool> tada_the_green = {"Tada the Green, champion of the flat land&#10;called Prax.", false};
-	std::pair<const std::string, bool> ves_venna = {"Ves Venna, Warlord of the Ice Tribe.", false};
-
-	Menu chose_enemy({boztakang, ukkar_gra, chinkis_mor, tada_the_green, ves_venna});
-	chose_enemy.prompt();
-
-	std::println("The Storm Age ended in disaster, when the gods and creatures of Chaos came, and destroyed nearly everything.\n"
-		 			"Orlanth and his allies fought hard, but Chaos almost always won. Many gods died, and new ones rose to prominence.\n"
-					"Many people died, too. Catastrophes shook the world: the Sun Fall, the Rain of Blood, and the terrible Laughing Tsunami.\n"
-					"The Darkness got so bad that even Orlanth and his companions had to abandon humans to their own destiny.\n"
-					"Only a few deities, either small ones or weak ones, remained. The world stagnated and died.\n"
-					"Your clan was diminished to a ragged handful of hardy survivors.\n");
-
-	next.prompt();
-
-	std::println("Heort the King was the leader who emerged amid the turmoil of the Darkness.\n"
-		 			"The efforts of Heort and his companions helped set the world in order again.\n"
-					"He created the laws that we follow to this day.\n"
-					"One of the great distinctions which Heort discerned among his clans was\n"
-					"that some of them tended towards either peace or war, while others\n"
-					"maintained a balance between these two principles.\n\n"
-					"Which kind was your clan?\n");
-
-	std::pair<const std::string, bool> war {"war", false};
-	std::pair<const std::string, bool> peace {"peace", false};
-	std::pair<const std::string, bool> balenced {"balenced", false};
-
-	Menu war_or_peace({war, peace, balenced});
-	war_or_peace.prompt();
-	
+enum class GameDurationChoice
+{
+	NOT_SET,
+	SHORT,
+	LONG
 };
 
 
 void play()
 {
 	std::println("Play Seclected!");
-	intro_seqence();
-}
+	auto res = intro_seqence();
+	std::vector<int> choices = std::get<std::vector<int>>(res);
 
+	WeddingChoice wedding_choice = static_cast<WeddingChoice>(choices[0]);
+	EarlyEventChoice first_god_choice = static_cast<EarlyEventChoice>(choices[1]);
+	ThrallsChoice thralls_choice = static_cast<ThrallsChoice>(choices[2]);
+	EnemyChoice enemy_choice = static_cast<EnemyChoice>(choices[3]);
+	WarPeaceChoice war_and_peace_chocie = static_cast<WarPeaceChoice>(choices[4]);
+	FirstGodChoice fierst_god_chocie = static_cast<FirstGodChoice>(choices[5]);
+	DragonChoice dragon_choice = static_cast<DragonChoice>(choices[6]);
+	LandClaimChoice land_claim_choice = static_cast<LandClaimChoice>(choices[7]);
+	DifficultyChoice diffculty_chocie = static_cast<DifficultyChoice>(choices[8]);
+	GameDurationChoice game_duration_choice = static_cast<GameDurationChoice>(choices[9]);
+	
+	std::string tribe_name = std::get<std::string>(res);
+}
 
 void start_menu()
 {

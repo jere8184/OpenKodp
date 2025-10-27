@@ -13,10 +13,10 @@ find_package(TGUI CONFIG REQUIRED)
 find_package(tinyxml2 CONFIG REQUIRED)
 
 message(${SDL2_DIR})
-add_executable(${PROJECT_NAME} src/simulation/game.cpp src/utils/page_parser.cpp)
+add_executable(${PROJECT_NAME} src/simulation/game.cpp src/utils/page_parser.cpp src/menu/menu.cpp src/menu/option.cpp)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE ${LUA_LIBRARIES})
-target_link_libraries(${PROJECT_NAME} PRIVATE sol2)
+#target_link_libraries(${PROJECT_NAME} PRIVATE sol2)
 target_link_libraries(${PROJECT_NAME} PRIVATE  $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main> $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>)
 target_link_libraries(${PROJECT_NAME} PRIVATE TGUI::TGUI)
 target_link_libraries(${PROJECT_NAME} PRIVATE tinyxml2::tinyxml2)
